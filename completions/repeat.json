@@ -1,0 +1,23 @@
+{
+    "subcommands": {
+        "--list": {},
+        "--cancel": {
+            "args": ["testcommand1", "othercommand"]
+        }
+    },
+    "switches": {
+        "--name": {
+            "argument_required": true
+        },
+        "--time": {
+            "argument_required": true
+        },
+        "--timeUnits": {
+            "argument_required": true,
+            "arguments": ["frames", "ticks", "days", "months", "years"]
+        },
+        "--command": {
+            "argument_required": true
+        }
+    }
+}

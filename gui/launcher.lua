@@ -1,6 +1,7 @@
 -- The DFHack in-game command launcher
 --@module=true
 
+local completion = require('completion')
 local dialogs = require('gui.dialogs')
 local gui = require('gui')
 local helpdb = require('helpdb')
@@ -200,7 +201,7 @@ history = history or init_history()
 local function get_first_word(text)
     local word = text:trim():split(' +')[1]
     if word:startswith(':') then word = word:sub(2) end
-    return word:lower()
+    return word
 end
 
 local function get_command_count(command)
@@ -857,7 +858,7 @@ function MainPanel:onInput(keys)
 end
 
 function MainPanel:refresh_autocomplete()
-    self.update_autocomplete(get_first_word(self.subviews.editfield.text))
+    self.update_autocomplete(self.subviews.editfield.text)
 end
 
 ----------------------------------
@@ -1072,7 +1073,8 @@ local function add_top_related_entries(entries, entry, n)
     end
 end
 
-function LauncherUI:update_autocomplete(firstword)
+function LauncherUI:update_autocomplete(text)
+    local firstword = get_first_word(text)
     local includes = {str=firstword, types='command'}
     local excludes = {}
     if helpdb.is_tag(firstword) then
@@ -1097,12 +1099,30 @@ function LauncherUI:update_autocomplete(firstword)
     -- command
     local found = extract_entry(entries, firstword) or helpdb.is_entry(firstword)
     sort_by_freq(entries)
+
+    self.subviews.autocomplete.autocomplete_append = false
+    self.subviews.autocomplete.autocomplete_prior = text
     if helpdb.is_tag(firstword) then
         self.subviews.autocomplete_label:setText{{text='Tagged tools', pen=COLOR_LIGHTMAGENTA}}
     elseif found then
-        table.insert(entries, 1, firstword)
-        self.subviews.autocomplete_label:setText{{text='Similar tools', pen=COLOR_BROWN}}
-        add_top_related_entries(entries, firstword, 20)
+        dfhack.internal.getCompletions(firstword)
+
+        -- Load completions data for the command
+        local completion_path = ('hack/data/completions/%s.json'):format(firstword)
+        if dfhack.filesystem.isfile(completion_path) then
+            self.subviews.autocomplete_label:setText{{text='Arguments', pen=COLOR_GREY}}
+            local def = json.decode_file(completion_path)
+            if (def.lua ~= nil) then
+                def = reqscript(def.lua).completions
+            end
+
+            local split = text:split(' +')
+            table.remove(split, 1)
+            local completions = completion.getCompletions(def, split, split[#split] ~= '')
+            entries = completions
+
+            self.subviews.autocomplete.autocomplete_append = true
+        end
     else
         self.subviews.autocomplete_label:setText{{text='Matching tools', pen=COLOR_GREY}}
     end
@@ -1113,13 +1133,19 @@ end
 function LauncherUI:on_edit_input(text, show_help)
     local firstword = get_first_word(text)
     self:update_help(text, firstword, show_help)
-    self:update_autocomplete(firstword)
+    self:update_autocomplete(text)
 end
 
 function LauncherUI:on_autocomplete(_, option)
     if option then
-        self.subviews.edit:set_text(option.text..' ', true)
-        self:update_help(option.text)
+        if self.subviews.autocomplete.autocomplete_append then
+            local pre = self.subviews.autocomplete.autocomplete_prior:split(' +')
+            pre[#pre] = option.text
+            self.subviews.edit:set_text(table.concat(pre, ' '), true)
+        else
+            self.subviews.edit:set_text(option.text, true)
+        end
+        self:update_help(self.subviews.edit.text or '')
     end
 end
 

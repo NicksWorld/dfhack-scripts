@@ -11,3 +11,6 @@ if(BUILD_TESTS)
             DESTINATION ${DFHACK_DATA_DESTINATION}/scripts/test/scripts
     )
 endif()
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/completions/
+        DESTINATION ${DFHACK_DATA_DESTINATION}/data/completions)
