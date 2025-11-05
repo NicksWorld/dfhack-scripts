@@ -3,14 +3,7 @@
 
 -- TODOS ====================
 
--- Refactor duplicated code into functions
---  File is getting long... might be time to consider creating additional modules
--- All the various states are getting hard to keep track of, e.g. placing extra/mirror/mark/etc...
---   Should consolidate the states into a single state attribute with enum values
 -- Keyboard support
--- Grid view without slowness (can ignore if next TODO is done, since normal mining mode has grid view)
---   Lags when drawing the full screen grid on each frame render
--- Integrate with default mining mode for designation type, priority, etc... (possible?)
 -- Figure out how to remove dug stairs with mode (nothing seems to work, include 'dig ramp')
 -- 'No overwrite' mode to not overwrite existing designations
 -- Snap to grid, or angle, like 45 degrees, or some kind of tools to assist with symmetrical designs
@@ -24,6 +17,40 @@
 -- Shape preview in panel
 -- Shape designer in preview panel to draw repeatable shapes i'e' 2x3 room with door
 -- 3D shapes, would allow stuff like spiral staircases/minecart tracks and other neat stuff, probably not too hard
+
+-- NIKITA TODOS
+-- Reorganize gui into dig/construct/erase modes
+-- Mining:
+-- - standard
+-- - stair
+-- - ramp
+-- - channel
+-- - destroy construction
+-- Engrave/Smooth
+-- Construction:
+-- - Wall
+-- - Floor
+-- - Fortification
+-- - Stairs
+-- - Ramp
+-- - Paved/Dirt road
+-- - Farm Plot
+-- Erase
+-- Popup window to select mining/construction type, using vanilla keybinds?
+-- Add priority, blueprint, damp/warm ignore options to mining options (global)
+--
+-- Redo "Shape" system into an interface that manages the creation of each shape.
+-- This should allow for features like a "brush mode" to paint out a designation, as well as
+-- more custom 3d shapes with inheritance.
+--
+-- Marquee tool to select area, with quick shortcuts to copy existing designations/structures
+-- - Allow enabling/disabling copying constructions
+--
+-- Shortcut to open buildingplan, which is needed to set construction materials
+--
+-- Keyboard cursor support
+--
+-- Reorder point selection priorities to allow resizing a 1x1 rect instead of moving
 
 -- END TODOS ================
 
@@ -1104,13 +1131,10 @@ function Design:onRenderFrame(dc, rect)
         bounds.y2 = bot_right.y
     end
 
-    -- Show mouse guidelines
-    if self.subviews.show_guides:getOptionValue() and mouse_pos and not self:getMouseFramePos() then
-        local map_x, map_y = dfhack.maps.getTileSize()
-        local horiz_bounds = {x1=0, x2=map_x, y1=mouse_pos.y, y2=mouse_pos.y, z1=mouse_pos.z, z2=mouse_pos.z}
-        guidm.renderMapOverlay(function() return guide_tile_pen end, horiz_bounds)
-        local vert_bounds = {x1=mouse_pos.x, x2=mouse_pos.x, y1=0, y2=map_y, z1=mouse_pos.z, z2=mouse_pos.z}
-        guidm.renderMapOverlay(function() return guide_tile_pen end, vert_bounds)
+    -- Show grid for alignment (only in graphics mode, like in vanilla)
+    if self.subviews.show_guides:getOptionValue() and dfhack.screen.inGraphicsMode() then
+        local vp = gui.ViewRect{}
+        dfhack.screen.fillRect(guide_tile_pen, vp.x1, vp.y1, vp.x2, vp.y2, true)
     end
 
     -- Show Mirror guidelines
